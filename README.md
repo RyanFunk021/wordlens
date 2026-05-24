@@ -97,25 +97,23 @@ Then follow the icon generation and Chrome loading steps above.
 
 ---
 
-## 💳 Monetisation — Lookup Cap Model
+## 💳 Monetisation & Access Tiers
 
-WordLens uses a **one-time purchase** model with no ads.
+WordLens has three ways to use it — no ads on any tier.
 
-| Tier | AI lookups | Price |
-|------|-----------|-------|
-| Free | 50 | $0 |
-| Pro | +500 (550 total) | $2.99 one-time |
+| Tier | AI lookups | Price | How |
+|------|-----------|-------|-----|
+| **Free** | 50 | $0 | Just install |
+| **Pro** | 550 total (+500) | $2.99 one-time | Stripe payment |
+| **BYOK** | Unlimited | $0 (you pay Anthropic directly) | Paste your API key in Settings |
 
-**Why this works economically:**
-- Model: **Claude Haiku 4.5** — ~$0.80/M input tokens (vs $3.00/M for Sonnet)
-- Cost per lookup: ~$0.0004
-- API cost for a Pro user burning all 550 lookups: **~$0.22**
-- Margin on a $2.99 sale: **~93%**
+**BYOK (Bring Your Own Key):**
+Users can paste their own Anthropic API key into the Settings popup, pick a model (Haiku / Sonnet / Opus), and get unlimited lookups for free — they pay Anthropic directly at cost. The key is validated against the API before saving, stored in `chrome.storage.local`, and never leaves the device. BYOK users bypass the lookup cap entirely.
 
 **What happens when the free limit is hit:**
 - The dictionary fallback still fires so the extension never goes silent
 - An amber upsell banner appears in the tooltip: *"You've used all 50 free AI lookups — Go Pro $2.99 →"*
-- Clicking the banner opens the Settings popup directly
+- Clicking the banner opens the Settings popup (where they can also set up BYOK)
 
 **Pro upgrade flow:**
 After payment, set `isPro: true` via a background message (`SET_PRO`). Simplest no-backend approach: have the Stripe success page direct the user to:
@@ -124,8 +122,8 @@ chrome-extension://YOUR_EXTENSION_ID/settings.html?pro=1
 ```
 Then check `?pro=1` in `settings.js` and call `sendMessage({ type: 'SET_PRO' })`.
 
-**Why Haiku instead of Sonnet:**
-Defining a word in 4 sentences at a given complexity level is a simple, structured task — Haiku handles it with output indistinguishable from Sonnet at a fraction of the cost. Sonnet (or Opus) would only be warranted for the sidebar's deeper explanation if you want to A/B test quality there.
+**Why Haiku as the default:**
+Defining a word in 4 sentences is a simple, structured task — Haiku handles it at ~$0.0004/lookup vs $0.002 for Sonnet. BYOK users who want higher quality output can select Sonnet or Opus in the model dropdown.
 
 ---
 
