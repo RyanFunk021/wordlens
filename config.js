@@ -48,4 +48,11 @@ export const WL_CONFIG = {
   // Fallback dictionary
   FALLBACK_DICT_API: 'https://api.dictionaryapi.dev/api/v2/entries/en/',
 
+  // Models available for BYOK (Bring Your Own Key) users to select in Settings
+  BYOK_MODELS: [
+    { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 — fastest & cheapest' },
+    { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6 — balanced'          },
+    { id: 'claude-opus-4-7',           label: 'Opus 4.7 — most capable'        },
+  ],
+
 };

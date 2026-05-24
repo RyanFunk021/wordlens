@@ -1,27 +1,37 @@
 /**
  * WordLens — Settings Popup Script
- * Displays usage stats, vocabulary profile, and Pro upgrade options.
+ * Displays usage stats, vocabulary profile, BYOK, and Pro upgrade options.
  */
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
-const usageCountEl    = document.getElementById('usage-count');
-const progressFillEl  = document.getElementById('progress-fill');
-const progressHintEl  = document.getElementById('progress-hint');
-const topWordsEl      = document.getElementById('top-words');
+const usageCountEl     = document.getElementById('usage-count');
+const progressFillEl   = document.getElementById('progress-fill');
+const progressHintEl   = document.getElementById('progress-hint');
+const topWordsEl       = document.getElementById('top-words');
 const complexitySlider = document.getElementById('complexity-slider');
-const complexityValEl = document.getElementById('complexity-val');
-const knowsWordsEl    = document.getElementById('knows-words');
-const needsWordsEl    = document.getElementById('needs-words');
-const resetBtn        = document.getElementById('reset-btn');
-const confirmOverlay  = document.getElementById('confirm-overlay');
-const cancelResetBtn  = document.getElementById('cancel-reset');
-const confirmResetBtn = document.getElementById('confirm-reset');
-const stripeBtn       = document.getElementById('stripe-btn');
-const upgradeCard     = document.getElementById('upgrade-card');
-const proOwnedCard    = document.getElementById('pro-owned-card');
-const proBadge        = document.getElementById('pro-badge');
+const complexityValEl  = document.getElementById('complexity-val');
+const knowsWordsEl     = document.getElementById('knows-words');
+const needsWordsEl     = document.getElementById('needs-words');
+const resetBtn         = document.getElementById('reset-btn');
+const confirmOverlay   = document.getElementById('confirm-overlay');
+const cancelResetBtn   = document.getElementById('cancel-reset');
+const confirmResetBtn  = document.getElementById('confirm-reset');
+const stripeBtn        = document.getElementById('stripe-btn');
+const upgradeCard      = document.getElementById('upgrade-card');
+const proOwnedCard     = document.getElementById('pro-owned-card');
+const proBadge         = document.getElementById('pro-badge');
 
-// These are filled in from GET_STATS response at runtime
+// BYOK refs
+const byokStatus       = document.getElementById('byok-status');
+const byokStatusText   = document.getElementById('byok-status-text');
+const byokClearBtn     = document.getElementById('byok-clear-btn');
+const byokForm         = document.getElementById('byok-form');
+const byokKeyInput     = document.getElementById('byok-key-input');
+const byokSaveBtn      = document.getElementById('byok-save-btn');
+const byokError        = document.getElementById('byok-error');
+const byokModelSelect  = document.getElementById('byok-model-select');
+
+// Filled in from GET_STATS at runtime
 let FREE_LIMIT = 50;
 let PRO_BONUS  = 500;
 
@@ -41,80 +51,39 @@ function sendMessage(msg) {
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Count word frequencies from a combined source of history + feedback log.
- * Returns [{ word, count }, ...] sorted by count descending.
- */
 function topWordsByFrequency(history, feedbackLog, n) {
   const freq = {};
-
-  history.forEach(h => {
-    const w = h.word.toLowerCase();
-    freq[w] = (freq[w] ?? 0) + 1;
-  });
-
-  feedbackLog.forEach(f => {
-    const w = f.word.toLowerCase();
-    freq[w] = (freq[w] ?? 0) + 1;
-  });
-
+  history.forEach(h => { const w = h.word.toLowerCase(); freq[w] = (freq[w] ?? 0) + 1; });
+  feedbackLog.forEach(f => { const w = f.word.toLowerCase(); freq[w] = (freq[w] ?? 0) + 1; });
   return Object.entries(freq)
     .sort(([, a], [, b]) => b - a)
     .slice(0, n)
-    .map(([word, count]) => ({ word, count }));
+    .map(([word]) => ({ word }));
 }
 
-/** Words that received 👍 ('easy') feedback — top N unique. */
 function easyWords(feedbackLog, n) {
   const seen = new Set();
-  return feedbackLog
-    .filter(f => f.feedback === 'easy')
-    .reverse() // most recent first
-    .filter(f => {
-      const key = f.word.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, n)
-    .map(f => f.word);
+  return feedbackLog.filter(f => f.feedback === 'easy').reverse()
+    .filter(f => { const k = f.word.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, n).map(f => f.word);
 }
 
-/** Words that received 👎 ('complex') feedback — top N unique. */
 function complexWords(feedbackLog, n) {
   const seen = new Set();
-  return feedbackLog
-    .filter(f => f.feedback === 'complex')
-    .reverse()
-    .filter(f => {
-      const key = f.word.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, n)
-    .map(f => f.word);
+  return feedbackLog.filter(f => f.feedback === 'complex').reverse()
+    .filter(f => { const k = f.word.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, n).map(f => f.word);
 }
 
-// ─── Render helpers ───────────────────────────────────────────────────────────
-
 function renderChips(container, words, emptyMsg) {
-  if (!words || words.length === 0) {
-    container.innerHTML = `<span class="empty-note">${emptyMsg}</span>`;
-    return;
-  }
-  container.innerHTML = words
-    .map(w => `<span class="word-chip">${escHtml(w)}</span>`)
-    .join('');
+  container.innerHTML = words?.length
+    ? words.map(w => `<span class="word-chip">${escHtml(w)}</span>`).join('')
+    : `<span class="empty-note">${emptyMsg}</span>`;
 }
 
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 
 // ─── Main render ──────────────────────────────────────────────────────────────
@@ -128,80 +97,168 @@ async function render() {
     feedbackLog     = [],
     lookupHistory   = [],
     isPro           = false,
+    isByok          = false,
     limit           = 50,
     freeLookupLimit = 50,
     proLookupBonus  = 500,
+    byokModels      = [],
+    userModel       = '',
   } = res;
 
   FREE_LIMIT = freeLookupLimit;
   PRO_BONUS  = proLookupBonus;
 
-  // ── Usage stats ────────────────────────────────────────────────────────────
+  // ── Usage stats ──────────────────────────────────────────────────────────────
   usageCountEl.textContent = usageCount.toLocaleString();
 
-  const pct = Math.min(100, (usageCount / limit) * 100);
-  progressFillEl.style.width = `${pct}%`;
-
-  const remaining = Math.max(0, limit - usageCount);
-
-  if (isPro) {
-    progressHintEl.textContent = `${remaining.toLocaleString()} AI lookups remaining (Pro — ${limit} total)`;
-    progressHintEl.style.color = '#22c55e';
-  } else if (remaining === 0) {
-    progressHintEl.textContent = `Free limit reached (${freeLookupLimit} lookups). Upgrade for ${proLookupBonus} more.`;
-    progressHintEl.style.color = '#ef4444';
+  if (isByok) {
+    progressFillEl.style.width      = '100%';
+    progressFillEl.style.background = 'var(--blue)';
+    progressHintEl.textContent      = 'Unlimited — using your own API key';
+    progressHintEl.style.color      = 'var(--blue)';
   } else {
-    progressHintEl.textContent = `${remaining} of ${freeLookupLimit} free AI lookups remaining`;
-    progressHintEl.style.color = '#888';
+    progressFillEl.style.background = 'var(--green)';
+    const pct       = Math.min(100, (usageCount / limit) * 100);
+    const remaining = Math.max(0, limit - usageCount);
+    progressFillEl.style.width = `${pct}%`;
+
+    if (isPro) {
+      progressHintEl.textContent = `${remaining.toLocaleString()} AI lookups remaining (Pro — ${limit} total)`;
+      progressHintEl.style.color = 'var(--green)';
+    } else if (remaining === 0) {
+      progressHintEl.textContent = `Free limit reached (${freeLookupLimit} lookups). Upgrade for ${proLookupBonus} more.`;
+      progressHintEl.style.color = 'var(--danger)';
+    } else {
+      progressHintEl.textContent = `${remaining} of ${freeLookupLimit} free AI lookups remaining`;
+      progressHintEl.style.color = '#888';
+    }
   }
 
-  // Top 5 looked-up words
   const topWords = topWordsByFrequency(lookupHistory, feedbackLog, 5);
   renderChips(topWordsEl, topWords.map(t => t.word), 'No lookups yet.');
 
-  // ── Vocabulary profile ─────────────────────────────────────────────────────
+  // ── Vocabulary profile ───────────────────────────────────────────────────────
   complexitySlider.value      = complexityScore;
   complexityValEl.textContent = complexityScore;
+  renderChips(knowsWordsEl, easyWords(feedbackLog, 10),    'No 👍 feedback yet.');
+  renderChips(needsWordsEl, complexWords(feedbackLog, 10), 'No 👎 feedback yet.');
 
-  renderChips(knowsWordsEl,  easyWords(feedbackLog, 10),    'No 👍 feedback yet.');
-  renderChips(needsWordsEl,  complexWords(feedbackLog, 10), 'No 👎 feedback yet.');
+  // ── BYOK section ─────────────────────────────────────────────────────────────
+  renderByok(isByok, byokModels, userModel);
 
-  // ── Pro state ──────────────────────────────────────────────────────────────
+  // ── Pro state ────────────────────────────────────────────────────────────────
   if (isPro) {
     proBadge.classList.add('visible');
-    upgradeCard.style.display    = 'none';
+    upgradeCard.style.display = 'none';
     proOwnedCard.classList.add('visible');
   } else {
-    upgradeCard.style.display    = 'block';
+    upgradeCard.style.display = 'block';
     proOwnedCard.classList.remove('visible');
     proBadge.classList.remove('visible');
   }
 }
 
+// ─── BYOK ─────────────────────────────────────────────────────────────────────
+
+function renderByok(isByok, models, savedModel) {
+  // Populate model dropdown
+  byokModelSelect.innerHTML = models.map(m =>
+    `<option value="${escHtml(m.id)}" ${m.id === savedModel ? 'selected' : ''}>${escHtml(m.label)}</option>`
+  ).join('');
+
+  if (isByok) {
+    byokStatus.style.display = 'flex';
+    byokStatusText.textContent = `Active · ${byokModelSelect.options[byokModelSelect.selectedIndex]?.text.split('—')[0].trim() ?? ''}`;
+    byokForm.style.display = 'none';
+  } else {
+    byokStatus.style.display = 'none';
+    byokForm.style.display = 'block';
+  }
+}
+
+byokSaveBtn.addEventListener('click', async () => {
+  const key = byokKeyInput.value.trim();
+  byokError.style.display = 'none';
+
+  if (!key.startsWith('sk-ant-')) {
+    byokError.textContent = 'Key should start with "sk-ant-". Check your Anthropic console.';
+    byokError.style.display = 'block';
+    return;
+  }
+
+  byokSaveBtn.textContent = 'Saving…';
+  byokSaveBtn.disabled = true;
+
+  // Quick validation — fire a tiny test call
+  const valid = await testApiKey(key, byokModelSelect.value);
+
+  if (!valid) {
+    byokError.textContent = 'Could not verify this key. Check that it is active and has credits.';
+    byokError.style.display = 'block';
+    byokSaveBtn.textContent = 'Save';
+    byokSaveBtn.disabled = false;
+    return;
+  }
+
+  await chrome.storage.local.set({ userApiKey: key, userModel: byokModelSelect.value });
+  byokKeyInput.value = '';
+  byokSaveBtn.textContent = 'Save';
+  byokSaveBtn.disabled = false;
+  await render();
+});
+
+byokClearBtn.addEventListener('click', async () => {
+  await chrome.storage.local.set({ userApiKey: '', userModel: '' });
+  await render();
+});
+
+// Save model selection immediately when changed (affects both active and inactive state)
+byokModelSelect.addEventListener('change', async () => {
+  const { userApiKey = '' } = await new Promise(r => chrome.storage.local.get({ userApiKey: '' }, r));
+  if (userApiKey) {
+    await chrome.storage.local.set({ userModel: byokModelSelect.value });
+    byokStatusText.textContent = `Active · ${byokModelSelect.options[byokModelSelect.selectedIndex]?.text.split('—')[0].trim() ?? ''}`;
+  }
+});
+
+/**
+ * Fire a minimal API call to verify the key before saving.
+ * Uses the cheapest model and 1 token to minimise cost (~$0.00001).
+ */
+async function testApiKey(key, model) {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: model || 'claude-haiku-4-5-20251001',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+      signal: AbortSignal.timeout(6000),
+    });
+    return res.ok || res.status === 400; // 400 = bad request body, but key is valid
+  } catch {
+    return false;
+  }
+}
+
 // ─── Stripe button ────────────────────────────────────────────────────────────
 async function initStripeLink() {
-  // Pull link from config — background provides it via GET_STATS or we read
-  // storage. Simplest: background stores STRIPE_LINK or we hard-code and
-  // let user replace. For now, read from storage with a fallback placeholder.
   const { stripeLink } = await new Promise(resolve =>
     chrome.storage.local.get({ stripeLink: '' }, resolve)
   );
-
   stripeBtn.href = stripeLink || '#';
-
-  // After user returns from Stripe payment page, background may have set isPro.
-  // We poll once when the window regains focus (Stripe redirects back here).
   window.addEventListener('focus', () => render(), { once: true });
 }
 
 // ─── Reset ────────────────────────────────────────────────────────────────────
-resetBtn.addEventListener('click', () => {
-  confirmOverlay.classList.add('visible');
-});
-
-cancelResetBtn.addEventListener('click', () => {
-  confirmOverlay.classList.remove('visible');
-});
+resetBtn.addEventListener('click', () => confirmOverlay.classList.add('visible'));
+cancelResetBtn.addEventListener('click', () => confirmOverlay.classList.remove('visible'));
 
 confirmResetBtn.addEventListener('click', async () => {
   confirmOverlay.classList.remove('visible');

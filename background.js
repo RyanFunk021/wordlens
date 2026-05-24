@@ -81,7 +81,21 @@ function buildLongPrompt(word, sentence, score) {
   return `Give a thorough explanation of '${word}' (context: '${sentence}') for someone at complexity level ${score}/10. Include: 1) Full definition, 2) Etymology and origin, 3) Two example sentences, 4) Common misconceptions or nuances, 5) Related words or concepts.`;
 }
 
+/**
+ * Resolves which API key and model to use.
+ * BYOK (user-supplied key) takes priority over the developer key in creds.json.
+ */
+async function resolveApiCredentials() {
+  const { userApiKey = '', userModel = '' } = await getStorageData({ userApiKey: '', userModel: '' });
+  return {
+    apiKey: userApiKey.trim() || WL_CREDS.ANTHROPIC_API_KEY,
+    model:  userModel.trim()  || WL_CONFIG.CLAUDE_MODEL,
+    isByok: !!userApiKey.trim(),
+  };
+}
+
 async function callClaudeAPI(prompt) {
+  const { apiKey, model } = await resolveApiCredentials();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), WL_CONFIG.API_TIMEOUT_MS);
 
@@ -91,11 +105,11 @@ async function callClaudeAPI(prompt) {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': WL_CREDS.ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: WL_CONFIG.CLAUDE_MODEL,
+        model,
         max_tokens: 512,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -198,12 +212,13 @@ async function handleLookupWord(request, sender) {
     return { success: true, definition: cached, complexity, usageCount, limit, fromCache: true };
   }
 
-  // Enforce lookup cap before making an API call
+  // BYOK users have no lookup cap — they're paying for their own API usage
+  const { isByok } = await resolveApiCredentials();
   const { usageCount: currentCount } = await getStorageData({ usageCount: 0 });
-  const limit = await getLookupLimit();
   const { isPro = false } = await getStorageData({ isPro: false });
+  const limit = await getLookupLimit();
 
-  if (currentCount >= limit) {
+  if (!isByok && currentCount >= limit) {
     // Still return a dictionary fallback so the extension doesn't go silent
     const fallback = await callDictionaryAPI(word);
     return {
@@ -213,6 +228,7 @@ async function handleLookupWord(request, sender) {
       usageCount: currentCount,
       limit,
       isPro,
+      isByok: false,
       isOffline: true,
       limitReached: true,
     };
@@ -242,10 +258,14 @@ async function handleLookupWord(request, sender) {
     await setCached(word, complexity, definition);
   }
 
-  const { usageCount } = await incrementUsage();
+  // Only count against the cap for non-BYOK users
+  let usageCount = currentCount;
+  if (!isByok) {
+    ({ usageCount } = await incrementUsage());
+  }
   await appendHistory({ word, sentence, definition, timestamp: Date.now() });
 
-  return { success: true, definition, complexity, usageCount, limit, isOffline };
+  return { success: true, definition, complexity, usageCount, limit, isOffline, isByok };
 }
 
 async function handleSidebarLookup(request) {
@@ -323,11 +343,22 @@ async function handleGetStats() {
     feedbackLog: [],
     lookupHistory: [],
     isPro: false,
+    userApiKey: '',
+    userModel: '',
   });
+  const isByok = !!data.userApiKey?.trim();
   const limit = data.isPro
     ? WL_CONFIG.FREE_LOOKUP_LIMIT + WL_CONFIG.PRO_LOOKUP_BONUS
     : WL_CONFIG.FREE_LOOKUP_LIMIT;
-  return { success: true, ...data, limit, freeLookupLimit: WL_CONFIG.FREE_LOOKUP_LIMIT, proLookupBonus: WL_CONFIG.PRO_LOOKUP_BONUS };
+  return {
+    success: true,
+    ...data,
+    isByok,
+    limit,
+    freeLookupLimit: WL_CONFIG.FREE_LOOKUP_LIMIT,
+    proLookupBonus:  WL_CONFIG.PRO_LOOKUP_BONUS,
+    byokModels:      WL_CONFIG.BYOK_MODELS,
+  };
 }
 
 async function handleGetHistory() {

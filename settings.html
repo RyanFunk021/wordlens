@@ -61,7 +61,33 @@
     </div>
   </section>
 
-  <!-- ── Section 3: Pro upgrade ────────────────────────────────────────────── -->
+  <!-- ── Section 3: Bring Your Own Key ───────────────────────────────────── -->
+  <section class="section">
+    <div class="section-title">Bring Your Own Key</div>
+    <p class="byok-desc">Use your own Anthropic API key for <strong>unlimited free lookups</strong>. Your key is stored locally and never leaves your device.</p>
+
+    <div class="byok-status" id="byok-status" style="display:none;">
+      <span class="byok-active-dot"></span>
+      <span id="byok-status-text">Active</span>
+      <button id="byok-clear-btn">Clear key</button>
+    </div>
+
+    <div id="byok-form">
+      <div class="byok-input-row">
+        <input type="password" id="byok-key-input" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false" />
+        <button id="byok-save-btn">Save</button>
+      </div>
+      <div class="byok-error" id="byok-error" style="display:none;"></div>
+    </div>
+
+    <label class="byok-model-label" for="byok-model-select">Model</label>
+    <select id="byok-model-select">
+      <!-- Populated by settings.js -->
+    </select>
+    <p class="byok-model-hint">Used for both tooltip and sidebar lookups when a key is active.</p>
+  </section>
+
+  <!-- ── Section 4: Pro upgrade ────────────────────────────────────────────── -->
   <section id="pro-section">
 
     <!-- Upgrade card (shown when NOT pro) -->
@@ -73,6 +99,7 @@
         <li>Support an indie developer ❤️</li>
       </ul>
       <a href="#" id="stripe-btn" target="_blank" rel="noopener">Upgrade to Pro →</a>
+      <p class="byok-alt-note">Or use your own API key above for unlimited free lookups.</p>
     </div>
 
     <!-- Already Pro card (shown when isPro) -->

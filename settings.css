@@ -282,6 +282,130 @@ header {
 
 .btn-cancel:hover, .btn-confirm:hover { opacity: 0.85; }
 
+/* ── BYOK section ────────────────────────────────────────────────────────── */
+.byok-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.byok-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-light);
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.byok-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+#byok-status-text { flex: 1; }
+
+#byok-clear-btn {
+  background: none;
+  border: 1px solid #bbf7d0;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #166534;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+#byok-clear-btn:hover { background: #bbf7d0; }
+
+.byok-input-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+#byok-key-input {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 120ms;
+  min-width: 0;
+}
+
+#byok-key-input:focus { border-color: var(--blue); }
+
+#byok-save-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 100ms;
+  flex-shrink: 0;
+}
+
+#byok-save-btn:hover { background: #1d4ed8; }
+
+.byok-error {
+  font-size: 11.5px;
+  color: var(--danger);
+  margin-bottom: 6px;
+}
+
+.byok-model-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+
+#byok-model-select {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+
+#byok-model-select:focus { border-color: var(--blue); }
+
+.byok-model-hint {
+  font-size: 11px;
+  color: var(--subtle);
+  margin-top: 5px;
+}
+
+/* ── Pro card BYOK footnote ───────────────────────────────────────────────── */
+.byok-alt-note {
+  font-size: 11.5px;
+  color: var(--subtle);
+  text-align: center;
+  margin-top: 10px;
+}
+
 /* ── Pro upgrade card ────────────────────────────────────────────────────── */
 #pro-section {
   padding: 14px 16px 16px;
