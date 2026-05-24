@@ -1,0 +1,9 @@
+# ⚠️ creds.json contains your Anthropic API key and Stripe link — never commit it
+creds.json
+
+# config.js is safe to commit (no secrets)
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp

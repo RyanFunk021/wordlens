@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordLens Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">Word<span>Lens</span></div>
+    <div class="pro-badge" id="pro-badge">⭐ Pro</div>
+  </header>
+
+  <!-- ── Section 1: Usage stats ───────────────────────────────────────────── -->
+  <section class="section">
+    <div class="section-title">Usage</div>
+
+    <div class="usage-row">
+      <div class="usage-count" id="usage-count">0</div>
+      <div class="usage-label">words looked up</div>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+    </div>
+    <div class="progress-hint" id="progress-hint">Free lookups until ads appear</div>
+
+    <div class="top-words-title">Top 5 words</div>
+    <div class="word-chip-row" id="top-words">
+      <span class="empty-note">No lookups yet.</span>
+    </div>
+  </section>
+
+  <!-- ── Section 2: Vocabulary profile ────────────────────────────────────── -->
+  <section class="section">
+    <div class="section-title">Vocabulary Profile</div>
+
+    <div class="complexity-row">
+      <span style="font-size:12px;color:#aaa;">Simple</span>
+      <input type="range" class="complexity-slider" id="complexity-slider"
+             min="1" max="10" value="5" readonly tabindex="-1" />
+      <span style="font-size:12px;color:#aaa;">Academic</span>
+      <div class="complexity-val" id="complexity-val">5</div>
+    </div>
+
+    <div class="vocab-section-title positive">✅ Already knows (👍 words)</div>
+    <div class="word-chip-row" id="knows-words">
+      <span class="empty-note">No feedback yet.</span>
+    </div>
+
+    <div class="vocab-section-title negative" style="margin-top:10px;">📖 Needs help (👎 words)</div>
+    <div class="word-chip-row" id="needs-words">
+      <span class="empty-note">No feedback yet.</span>
+    </div>
+
+    <div class="reset-row">
+      <button id="reset-btn">Reset profile</button>
+    </div>
+  </section>
+
+  <!-- ── Section 3: Pro upgrade ────────────────────────────────────────────── -->
+  <section id="pro-section">
+
+    <!-- Upgrade card (shown when NOT pro) -->
+    <div class="pro-card" id="upgrade-card">
+      <div class="pro-card-headline">Go Pro — <span>$2.99 one-time</span></div>
+      <ul class="pro-benefits">
+        <li>500 more AI lookups (550 total)</li>
+        <li>Dictionary fallback still works after that</li>
+        <li>Support an indie developer ❤️</li>
+      </ul>
+      <a href="#" id="stripe-btn" target="_blank" rel="noopener">Upgrade to Pro →</a>
+    </div>
+
+    <!-- Already Pro card (shown when isPro) -->
+    <div class="pro-owned-card" id="pro-owned-card">
+      <div class="pro-owned-icon">⭐</div>
+      <div class="pro-owned-text">
+        <strong>You're a Pro user ✓</strong>
+        <span>Thank you for supporting WordLens!</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Confirm dialog overlay ────────────────────────────────────────────── -->
+  <div id="confirm-overlay">
+    <div class="confirm-box">
+      <h3>Reset profile?</h3>
+      <p>This will clear your complexity score, feedback history, lookup history, and all cached definitions. This cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="cancel-reset">Cancel</button>
+        <button class="btn-confirm" id="confirm-reset">Reset everything</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="settings.js" type="module"></script>
+</body>
+</html>

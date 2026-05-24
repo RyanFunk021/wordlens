@@ -1,0 +1,228 @@
+/* WordLens — Content Styles
+   All selectors are prefixed with #wl-tooltip-root or .wl-* to avoid
+   bleeding into the host page. The tooltip itself uses a CSS reset so
+   host-page font/color/margin rules cannot override it.
+*/
+
+/* ── Tooltip container ─────────────────────────────────────────────────────── */
+#wl-tooltip-root.wl-tooltip {
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+
+  position: fixed;
+  z-index: 2147483647;
+  max-width: 300px;
+  min-width: 220px;
+  width: max-content;
+
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 2px  8px rgba(0, 0, 0, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 0   0  1px rgba(0, 0, 0, 0.05);
+
+  padding: 0;
+  overflow: hidden;
+
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
+  transition: opacity 140ms ease, transform 140ms ease;
+  pointer-events: auto;
+
+  box-sizing: border-box;
+}
+
+#wl-tooltip-root.wl-tooltip * {
+  box-sizing: border-box;
+}
+
+#wl-tooltip-root.wl-tooltip.wl-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+#wl-tooltip-root .wl-word {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#wl-tooltip-root .wl-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+/* ── Icon buttons (🔊 👍 👎) ─────────────────────────────────────────────── */
+#wl-tooltip-root .wl-btn-icon {
+  all: initial;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 100ms;
+  user-select: none;
+}
+
+#wl-tooltip-root .wl-btn-icon:hover {
+  background: #f4f4f4;
+}
+
+#wl-tooltip-root .wl-btn-icon.wl-fb-sent {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-body {
+  padding: 10px 12px;
+}
+
+#wl-tooltip-root .wl-definition {
+  all: initial;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #333;
+  display: block;
+  white-space: normal;
+}
+
+/* ── Offline badge ─────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-offline-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #888;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-bottom: 6px;
+}
+
+/* ── Loading state ─────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+#wl-tooltip-root .wl-loading-text {
+  font-size: 13px;
+  color: #888;
+}
+
+#wl-tooltip-root .wl-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #555;
+  border-radius: 50%;
+  animation: wl-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes wl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error text ────────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-error-text {
+  color: #c0392b;
+}
+
+/* ── Milestone message ─────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-milestone {
+  font-size: 11.5px;
+  color: #666;
+  background: #fffbeb;
+  border-top: 1px solid #fef3c7;
+  padding: 6px 12px;
+  text-align: center;
+}
+
+/* ── Footer (Tell me more) ─────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-footer {
+  padding: 0 12px 10px;
+}
+
+#wl-tooltip-root .wl-tell-more {
+  all: initial;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color 100ms;
+}
+
+#wl-tooltip-root .wl-tell-more:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+/* ── Pro upsell banner ──────────────────────────────────────────────────────── */
+#wl-tooltip-root .wl-upsell {
+  padding: 8px 12px 10px;
+  background: #fffbeb;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#wl-tooltip-root .wl-upsell-text {
+  font-size: 12px;
+  color: #92400e;
+}
+
+#wl-tooltip-root .wl-upsell-btn {
+  all: initial;
+  font-family: inherit;
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  background: #22c55e;
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 100ms;
+}
+
+#wl-tooltip-root .wl-upsell-btn:hover {
+  background: #16a34a;
+}

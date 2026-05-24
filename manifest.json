@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "WordLens",
+  "version": "1.0.0",
+  "description": "Context-aware AI definitions for any word you hover over — powered by Claude.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "sidePanel",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "settings.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "WordLens Settings"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "exclude_matches": [
+        "chrome://*/*",
+        "chrome-extension://*/*",
+        "about://*/*"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

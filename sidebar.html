@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordLens — Deep Dive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ───────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111;
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: #3b82f6; }
+
+    /* ── History chips ─────────────────────────────────────────────────── */
+    #history-section {
+      padding: 10px 16px 6px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .history-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    #chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      background: #f4f4f5;
+      border: none;
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #444;
+      cursor: pointer;
+      transition: background 100ms, color 100ms;
+      white-space: nowrap;
+    }
+
+    .chip:hover { background: #e5e7eb; color: #111; }
+    .chip.active { background: #3b82f6; color: #fff; }
+
+    /* ── Main content ──────────────────────────────────────────────────── */
+    main {
+      padding: 20px 16px 32px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #aaa;
+      margin-top: 60px;
+      font-size: 13px;
+    }
+
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* ── Word header ───────────────────────────────────────────────────── */
+    #word-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    #word-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.2;
+    }
+
+    #speak-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 2px 4px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      transition: background 100ms;
+    }
+    #speak-btn:hover { background: #f4f4f4; }
+
+    #context-sentence {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 16px;
+      font-style: italic;
+      line-height: 1.4;
+    }
+
+    #complexity-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #3b82f6;
+      background: #eff6ff;
+      border-radius: 99px;
+      padding: 2px 8px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Definition body ───────────────────────────────────────────────── */
+    #definition-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #333;
+    }
+
+    /* Format sections returned by Claude */
+    #definition-body h3 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      margin: 18px 0 6px;
+    }
+
+    #definition-body p {
+      margin-bottom: 10px;
+    }
+
+    #definition-body ol, #definition-body ul {
+      padding-left: 18px;
+      margin-bottom: 10px;
+    }
+
+    #definition-body li { margin-bottom: 4px; }
+
+    /* ── Spinner ───────────────────────────────────────────────────────── */
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 0;
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error state ───────────────────────────────────────────────────── */
+    .error-msg {
+      color: #c0392b;
+      font-size: 13px;
+      padding: 12px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Word<span>Lens</span></div>
+  </header>
+
+  <!-- Last 10 lookups as clickable chips -->
+  <section id="history-section">
+    <div class="history-label">Recent lookups</div>
+    <div id="chips-container">
+      <span style="font-size:12px;color:#ccc;">Loading…</span>
+    </div>
+  </section>
+
+  <main>
+    <div id="content">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <p>Hover over a word on any page<br>then click <strong>Tell me more →</strong></p>
+      </div>
+    </div>
+  </main>
+
+  <script src="sidebar.js" type="module"></script>
+</body>
+</html>
