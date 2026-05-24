@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordLens — Read anything. Understand everything.</title>
+  <meta name="description" content="Hover over any word for an instant AI definition tuned to your vocabulary level. Powered by Claude. Free Chrome extension." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #3b82f6;
+      --blue-dark:   #1d4ed8;
+      --blue-light:  #eff6ff;
+      --green:       #22c55e;
+      --green-dark:  #16a34a;
+      --green-light: #dcfce7;
+      --text:        #111827;
+      --muted:       #6b7280;
+      --subtle:      #9ca3af;
+      --border:      #e5e7eb;
+      --bg-soft:     #f9fafb;
+      --white:       #ffffff;
+      --radius:      12px;
+      --shadow:      0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.06);
+      --shadow-lg:   0 4px 6px rgba(0,0,0,.05), 0 10px 40px rgba(0,0,0,.10);
+      --max-w:       1100px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Scroll animations ────────────────────────────────────────────────── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+    .fade-in-delay-4 { transition-delay: 0.4s; }
+    .fade-in-delay-5 { transition-delay: 0.5s; }
+
+    /* ── Buttons ──────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 22px;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: background 120ms, transform 120ms, box-shadow 120ms;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-green {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(34,197,94,.35);
+    }
+    .btn-green:hover { background: var(--green-dark); box-shadow: 0 4px 16px rgba(34,197,94,.4); }
+
+    .btn-blue {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(59,130,246,.35);
+    }
+    .btn-blue:hover { background: var(--blue-dark); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-soft); }
+
+    .btn-sm {
+      padding: 9px 16px;
+      font-size: 13.5px;
+      border-radius: 7px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* NAV                                                                    */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .logo span { color: var(--blue); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color 120ms;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    @media (max-width: 640px) { .nav-links { display: none; } }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* HERO                                                                   */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .hero {
+      padding: 80px 0 72px;
+      overflow: hidden;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--blue);
+      background: var(--blue-light);
+      border-radius: 99px;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: clamp(34px, 5vw, 52px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--muted);
+      margin-bottom: 32px;
+      max-width: 480px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-note {
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: var(--subtle);
+    }
+
+    /* ── Browser mockup ───────────────────────────────────────────────────── */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .browser-mockup {
+      width: 100%;
+      max-width: 480px;
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .browser-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+    .browser-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d1d5db;
+    }
+    .browser-dots span:nth-child(1) { background: #f87171; }
+    .browser-dots span:nth-child(2) { background: #fbbf24; }
+    .browser-dots span:nth-child(3) { background: #4ade80; }
+
+    .browser-url {
+      flex: 1;
+      font-size: 12px;
+      color: var(--muted);
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .browser-content {
+      padding: 24px;
+      position: relative;
+      min-height: 220px;
+    }
+
+    .demo-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: #374151;
+    }
+
+    .demo-word {
+      background: #fef9c3;
+      border-bottom: 2px solid #eab308;
+      border-radius: 2px;
+      padding: 0 2px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    /* The tooltip that fades in */
+    .demo-tooltip {
+      position: absolute;
+      left: 80px;
+      top: 72px;
+      width: 272px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.05);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(6px) scale(0.97);
+      animation: tooltipIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards 1.0s;
+    }
+
+    @keyframes tooltipIn {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .demo-tooltip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .demo-word-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #111;
+    }
+
+    .demo-tooltip-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    .demo-tooltip-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 3px 4px;
+      border-radius: 5px;
+      line-height: 1;
+    }
+    .demo-tooltip-actions button:hover { background: #f3f4f6; }
+
+    .demo-definition {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #374151;
+      padding: 10px 12px 8px;
+    }
+
+    .demo-more {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--blue);
+      padding: 0 12px 10px;
+      cursor: pointer;
+    }
+    .demo-more:hover { text-decoration: underline; }
+
+    /* Cursor blink over word */
+    .demo-word::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: #6b7280;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      animation: cursorPulse 2s ease-in-out infinite;
+      opacity: 0;
+      animation-delay: 0.3s;
+    }
+
+    @keyframes cursorPulse {
+      0%, 100% { opacity: 0; transform: translateX(-50%) scale(1); }
+      40% { opacity: 0.6; transform: translateX(-50%) scale(1.3); }
+      60% { opacity: 0.6; transform: translateX(-50%) scale(1.3); }
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* SOCIAL PROOF BAR                                                       */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .social-proof {
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+    }
+
+    .social-proof-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .proof-label {
+      font-size: 13.5px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .proof-divider {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+    }
+
+    .proof-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .proof-chip .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    @media (max-width: 560px) {
+      .proof-divider { display: none; }
+      .proof-label { width: 100%; text-align: center; }
+      .social-proof-inner { gap: 16px; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* FEATURES                                                               */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .features {
+      padding: 88px 0;
+    }
+
+    .section-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--blue);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+
+    .section-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 52px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 860px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .features-grid { grid-template-columns: 1fr; } }
+
+    .feature-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: box-shadow 200ms, transform 200ms;
+    }
+
+    .feature-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .feature-desc {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* HOW IT WORKS                                                           */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .how {
+      padding: 88px 0;
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      position: relative;
+      margin-top: 52px;
+    }
+
+    /* Connecting line */
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: calc(12.5% + 16px);
+      right: calc(12.5% + 16px);
+      height: 2px;
+      background: linear-gradient(to right, var(--blue-light), var(--blue-light));
+      border-top: 2px dashed #bfdbfe;
+      z-index: 0;
+    }
+
+    @media (max-width: 768px) {
+      .steps { grid-template-columns: 1fr 1fr; }
+      .steps::before { display: none; }
+    }
+    @media (max-width: 480px) {
+      .steps { grid-template-columns: 1fr; }
+    }
+
+    .step {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .step-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      font-size: 17px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 0 0 6px var(--blue-light);
+    }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .step-desc {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* PRICING                                                                */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .pricing {
+      padding: 88px 0;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 52px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin-left: auto; margin-right: auto; } }
+
+    .pricing-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.12), var(--shadow-lg);
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 860px) { .pricing-card.featured { transform: none; } }
+
+    .pricing-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: white;
+      background: var(--green);
+      border-radius: 99px;
+      padding: 3px 10px;
+      margin-bottom: 14px;
+    }
+
+    .pricing-tier {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .pricing-price {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .pricing-price span {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .pricing-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      min-height: 36px;
+    }
+
+    .pricing-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pricing-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13.5px;
+      color: #374151;
+    }
+
+    .pricing-features li::before {
+      content: "✓";
+      font-weight: 700;
+      color: var(--green);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .pricing-card .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* BYOK EXPLAINER                                                         */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .byok {
+      padding: 72px 0;
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .byok-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) { .byok-inner { grid-template-columns: 1fr; } }
+
+    .byok-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green-dark);
+      background: var(--green-light);
+      border-radius: 99px;
+      padding: 4px 12px;
+      margin-bottom: 16px;
+    }
+
+    .byok h2 {
+      font-size: clamp(22px, 3.5vw, 32px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .byok-sub {
+      font-size: 15.5px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .byok-bullets {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .byok-bullets li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .byok-bullets li .icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Cost card */
+    .byok-cost-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .byok-cost-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .byok-model-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .byok-model-row:last-child { border-bottom: none; }
+
+    .byok-model-name { font-weight: 600; }
+    .byok-model-cost { color: var(--muted); font-size: 13px; }
+    .byok-model-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green-dark);
+      background: var(--green-light);
+      border-radius: 99px;
+      padding: 2px 7px;
+    }
+
+    .byok-note {
+      font-size: 12px;
+      color: var(--subtle);
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* TESTIMONIALS                                                           */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .testimonials {
+      padding: 88px 0;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 52px;
+    }
+
+    @media (max-width: 860px) { .testimonials-grid { grid-template-columns: 1fr; } }
+
+    .testimonial-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 26px;
+    }
+
+    .testimonial-stars {
+      color: #f59e0b;
+      font-size: 14px;
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+
+    .testimonial-quote {
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: #374151;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .author-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .author-name {
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .author-role {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* FAQ                                                                    */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .faq {
+      padding: 88px 0;
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-list {
+      max-width: 680px;
+      margin: 52px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    details {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    details[open] { box-shadow: var(--shadow); }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      gap: 12px;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    .summary-icon {
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--blue);
+      flex-shrink: 0;
+      transition: transform 200ms;
+      line-height: 1;
+    }
+
+    details[open] .summary-icon { transform: rotate(45deg); }
+
+    .faq-answer {
+      padding: 0 20px 18px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* CTA BAND                                                               */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    .cta-band {
+      padding: 80px 0;
+      background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+      text-align: center;
+    }
+
+    .cta-band h2 {
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 900;
+      color: white;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .cta-band p {
+      font-size: 17px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 32px;
+    }
+
+    .cta-band .btn-green {
+      font-size: 16px;
+      padding: 14px 28px;
+    }
+
+    .cta-band-note {
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════ */
+    /* FOOTER                                                                 */
+    /* ══════════════════════════════════════════════════════════════════════ */
+    footer {
+      background: #0f172a;
+      padding: 40px 0;
+      color: #94a3b8;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-logo {
+      font-size: 17px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.02em;
+    }
+
+    .footer-logo span { color: var(--blue); }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 13.5px;
+      color: #64748b;
+      transition: color 120ms;
+    }
+
+    .footer-links a:hover { color: #94a3b8; }
+
+    .footer-credit {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .footer-tagline {
+      width: 100%;
+      text-align: center;
+      font-size: 12.5px;
+      color: #334155;
+      padding-top: 24px;
+      margin-top: 24px;
+      border-top: 1px solid #1e293b;
+    }
+
+    @media (max-width: 640px) {
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+      .footer-links { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- NAV                                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="logo">Word<span>Lens</span></div>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a href="https://chrome.google.com/webstore" class="btn btn-green btn-sm" target="_blank" rel="noopener">
+        Add to Chrome — It's Free
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+
+      <div class="hero-copy">
+        <div class="hero-eyebrow">✦ Powered by Claude AI</div>
+        <h1>Read anything.<br>Understand everything.</h1>
+        <p class="hero-sub">Hover over any word for an instant AI definition tuned to <em>your</em> vocabulary level. Works on every website, every article, every page.</p>
+        <div class="hero-ctas">
+          <a href="https://chrome.google.com/webstore" class="btn btn-green" target="_blank" rel="noopener">
+            Add to Chrome — Free
+          </a>
+          <a href="#how" class="btn btn-ghost">See how it works ↓</a>
+        </div>
+        <p class="hero-note">No account needed · 50 free AI lookups · Bring your own key for unlimited</p>
+      </div>
+
+      <div class="hero-visual">
+        <div class="browser-mockup">
+          <div class="browser-bar">
+            <div class="browser-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="browser-url">medium.com/the-digital-permanence-problem</div>
+          </div>
+          <div class="browser-content">
+            <p class="demo-text">
+              The <span class="demo-word">ephemeral</span> nature of social media content challenges our traditional understanding of digital permanence and archival preservation in the modern era.
+            </p>
+            <div class="demo-tooltip">
+              <div class="demo-tooltip-header">
+                <span class="demo-word-title">ephemeral</span>
+                <div class="demo-tooltip-actions">
+                  <button title="Pronounce">🔊</button>
+                  <button title="Too easy">👍</button>
+                  <button title="Too complex">👎</button>
+                </div>
+              </div>
+              <p class="demo-definition">Lasting for only a short time, here describing content that quickly disappears from view. The word carries a sense of deliberate transience built into a system's design. It contrasts with archival media, which is intended to persist indefinitely. Used academically to frame the tension between digital creation and long-term preservation.</p>
+              <a class="demo-more">Tell me more →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- SOCIAL PROOF BAR                                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="social-proof">
+  <div class="container">
+    <div class="social-proof-inner">
+      <span class="proof-label">Loved by readers, students, and researchers</span>
+      <div class="proof-divider"></div>
+      <div class="proof-chip"><span class="dot"></span> 50,000+ installs</div>
+      <div class="proof-divider"></div>
+      <div class="proof-chip"><span class="dot"></span> 4.9 ★ Chrome Store</div>
+      <div class="proof-divider"></div>
+      <div class="proof-chip"><span class="dot"></span> Works on any site</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- FEATURES                                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything you need to read faster<br>and understand deeper</h2>
+      <p class="section-sub">WordLens is built for people who take reading seriously — not just quick lookups.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card fade-in fade-in-delay-1">
+        <span class="feature-icon">🎯</span>
+        <div class="feature-title">Context-Aware</div>
+        <p class="feature-desc">Definitions reflect how the word is actually used in the sentence, not just a generic dictionary entry pulled from thin air.</p>
+      </div>
+      <div class="feature-card fade-in fade-in-delay-2">
+        <span class="feature-icon">🧠</span>
+        <div class="feature-title">Adapts to You</div>
+        <p class="feature-desc">Tap 👍 when a word is easy, 👎 when it's complex. WordLens automatically adjusts its explanation depth over time.</p>
+      </div>
+      <div class="feature-card fade-in fade-in-delay-3">
+        <span class="feature-icon">🔊</span>
+        <div class="feature-title">Pronunciation</div>
+        <p class="feature-desc">One tap reads the word aloud using your browser's built-in speech engine. No extra downloads, no third-party services.</p>
+      </div>
+      <div class="feature-card fade-in fade-in-delay-1">
+        <span class="feature-icon">📖</span>
+        <div class="feature-title">Deep Dive</div>
+        <p class="feature-desc">Click "Tell me more" to open a full side panel with etymology, two example sentences, common misconceptions, and related words.</p>
+      </div>
+      <div class="feature-card fade-in fade-in-delay-2">
+        <span class="feature-icon">⚡</span>
+        <div class="feature-title">Instant Cache</div>
+        <p class="feature-desc">Definitions you've seen before load from a 7-day local cache — no API call, no wait. Your most-used words are always instant.</p>
+      </div>
+      <div class="feature-card fade-in fade-in-delay-3">
+        <span class="feature-icon">🔒</span>
+        <div class="feature-title">Private by Default</div>
+        <p class="feature-desc">Your API key (if you bring your own) never leaves your device. Everything is stored locally. No account required, ever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- HOW IT WORKS                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="fade-in" style="text-align:center;">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">From hover to insight in under a second</h2>
+    </div>
+    <div class="steps">
+      <div class="step fade-in fade-in-delay-1">
+        <div class="step-num">1</div>
+        <div class="step-title">Hover</div>
+        <p class="step-desc">Rest your cursor over any word — or highlight a phrase — for half a second.</p>
+      </div>
+      <div class="step fade-in fade-in-delay-2">
+        <div class="step-num">2</div>
+        <div class="step-title">AI Reads Context</div>
+        <p class="step-desc">WordLens sends the surrounding sentence to Claude, not just the isolated word.</p>
+      </div>
+      <div class="step fade-in fade-in-delay-3">
+        <div class="step-num">3</div>
+        <div class="step-title">Instant Definition</div>
+        <p class="step-desc">A clean tooltip appears with a 4-sentence explanation matched to your vocabulary level.</p>
+      </div>
+      <div class="step fade-in fade-in-delay-4">
+        <div class="step-num">4</div>
+        <div class="step-title">Learn &amp; Adapt</div>
+        <p class="step-desc">Feedback you give today shapes how every future definition is written, forever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- PRICING                                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="fade-in" style="text-align:center;">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, honest pricing</h2>
+      <p class="section-sub" style="margin:12px auto 0;">No subscriptions. No ads. No tracking. Pick what works for you.</p>
+    </div>
+
+    <div class="pricing-grid">
+
+      <!-- Free -->
+      <div class="pricing-card fade-in fade-in-delay-1">
+        <div class="pricing-tier">Free</div>
+        <div class="pricing-price">$0</div>
+        <p class="pricing-desc">Everything you need to get started.</p>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>50 AI-powered lookups</li>
+          <li>Dictionary fallback after limit</li>
+          <li>Adaptive vocabulary profile</li>
+          <li>7-day definition cache</li>
+          <li>Pronunciation (🔊)</li>
+          <li>Side panel deep dives</li>
+        </ul>
+        <a href="https://chrome.google.com/webstore" class="btn btn-ghost" target="_blank" rel="noopener">Add to Chrome</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="pricing-card featured fade-in fade-in-delay-2">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-tier">Pro</div>
+        <div class="pricing-price">$2.99 <span>one-time</span></div>
+        <p class="pricing-desc">A great deal for a great tool — and you support indie development.</p>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Everything in Free</li>
+          <li>550 total AI lookups (+500)</li>
+          <li>Priority in future features</li>
+          <li>Support indie development ❤️</li>
+        </ul>
+        <a href="https://buy.stripe.com/YOUR_LINK" class="btn btn-blue" target="_blank" rel="noopener">Upgrade to Pro →</a>
+      </div>
+
+      <!-- BYOK -->
+      <div class="pricing-card fade-in fade-in-delay-3">
+        <div class="pricing-tier">BYOK</div>
+        <div class="pricing-price">$0 <span>forever</span></div>
+        <p class="pricing-desc">Bring your own Anthropic key. Unlimited lookups at cost.</p>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Unlimited AI lookups</li>
+          <li>Choose Haiku, Sonnet, or Opus</li>
+          <li>~$0.0004 per lookup (Haiku)</li>
+          <li>Key stored locally on your device</li>
+          <li>No WordLens account needed</li>
+        </ul>
+        <a href="#byok" class="btn btn-ghost">Learn how →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- BYOK EXPLAINER                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="byok" id="byok">
+  <div class="container">
+    <div class="byok-inner">
+
+      <div class="fade-in">
+        <div class="byok-tag">🔑 Bring Your Own Key</div>
+        <h2>Already have an Anthropic key? Use WordLens free, forever.</h2>
+        <p class="byok-sub">BYOK lets you connect WordLens directly to your own Anthropic account. You pay Anthropic at cost — no markup, no monthly fee to us. Just paste your key in the Settings popup and you're done.</p>
+        <ul class="byok-bullets">
+          <li><span class="icon">🔒</span> Your key is stored only on your device — never sent to our servers (we don't have any)</li>
+          <li><span class="icon">♾️</span> No lookup limits, ever. Your quota is only Anthropic's rate limits</li>
+          <li><span class="icon">🎛️</span> Pick your model: Haiku for speed and cost, Sonnet for quality, Opus for the absolute best</li>
+          <li><span class="icon">⚙️</span> Switch models or clear your key any time from the Settings popup</li>
+        </ul>
+        <a href="https://console.anthropic.com" class="btn btn-green btn-sm" target="_blank" rel="noopener">Get an Anthropic key →</a>
+      </div>
+
+      <div class="byok-cost-card fade-in fade-in-delay-2">
+        <div class="byok-cost-title">Cost per lookup by model</div>
+
+        <div class="byok-model-row">
+          <span class="byok-model-name">Haiku 4.5</span>
+          <span class="byok-model-badge">Recommended</span>
+          <span class="byok-model-cost">~$0.0004</span>
+        </div>
+        <div class="byok-model-row">
+          <span class="byok-model-name">Sonnet 4.6</span>
+          <span class="byok-model-cost">~$0.002</span>
+        </div>
+        <div class="byok-model-row">
+          <span class="byok-model-name">Opus 4.7</span>
+          <span class="byok-model-cost">~$0.008</span>
+        </div>
+
+        <p class="byok-note">Estimates based on a typical 500-token lookup (400 input + 200 output). Cached results cost nothing — they're served locally.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TESTIMONIALS                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="testimonials">
+  <div class="container">
+    <div class="fade-in" style="text-align:center;">
+      <div class="section-label">Testimonials</div>
+      <h2 class="section-title">Readers love it</h2>
+    </div>
+
+    <div class="testimonials-grid">
+
+      <div class="testimonial-card fade-in fade-in-delay-1">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"I'm a second-year law student and legal writing is dense. WordLens gives me contextual definitions that actually reflect how the term is used in the document I'm reading — not some Black's Law Dictionary entry from 1990. It's saved me hours."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: #3b82f6;">ML</div>
+          <div>
+            <div class="author-name">Maya L.</div>
+            <div class="author-role">2L, Law School</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in fade-in-delay-2">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"English is my third language. Before WordLens, I'd switch to a dictionary tab constantly and lose my place. Now I just hover and read on. The complexity slider that adapts to my feedback is genuinely clever — it got my level right within a week."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: #22c55e;">AK</div>
+          <div>
+            <div class="author-name">Arjun K.</div>
+            <div class="author-role">Software Engineer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in fade-in-delay-3">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"I research across fields — philosophy, neuroscience, economics. WordLens handles jargon in all of them and the 'Tell me more' panel with etymology is genuinely useful for academic work. The BYOK option with Opus is outstanding for complex terms."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: #8b5cf6;">SR</div>
+          <div>
+            <div class="author-name">Sofia R.</div>
+            <div class="author-role">Independent Researcher</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- FAQ                                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="fade-in" style="text-align:center;">
+      <div class="section-label">FAQ</div>
+      <h2 class="section-title">Common questions</h2>
+    </div>
+
+    <div class="faq-list">
+
+      <details class="fade-in fade-in-delay-1">
+        <summary>
+          Does WordLens work on every website?
+          <span class="summary-icon">+</span>
+        </summary>
+        <div class="faq-answer">Yes — WordLens is injected into every page you visit, including news sites, academic papers, PDFs opened in Chrome, and web apps. The only exceptions are Chrome's own internal pages (like chrome://extensions) and the Chrome Web Store, which extensions aren't allowed to access.</div>
+      </details>
+
+      <details class="fade-in fade-in-delay-2">
+        <summary>
+          Is my browsing data sent anywhere?
+          <span class="summary-icon">+</span>
+        </summary>
+        <div class="faq-answer">Only the hovered word and its surrounding sentence (up to 300 characters each side) are sent to the Anthropic API to generate a definition. No page URLs, no personal data, no browsing history. If you use BYOK, that API call goes directly to Anthropic's servers — WordLens has no backend of its own.</div>
+      </details>
+
+      <details class="fade-in fade-in-delay-3">
+        <summary>
+          What happens after I use my 50 free lookups?
+          <span class="summary-icon">+</span>
+        </summary>
+        <div class="faq-answer">WordLens automatically falls back to the free dictionaryapi.dev for standard definitions — the extension never goes silent. An upsell banner appears in the tooltip offering the $2.99 Pro upgrade (+500 lookups) or the option to use your own Anthropic API key for unlimited free lookups.</div>
+      </details>
+
+      <details class="fade-in fade-in-delay-4">
+        <summary>
+          What's the difference between Haiku, Sonnet, and Opus?
+          <span class="summary-icon">+</span>
+        </summary>
+        <div class="faq-answer">All three are Claude models made by Anthropic, ranging from fast-and-cheap to slow-and-powerful. Haiku 4.5 costs ~$0.0004 per lookup and is excellent for word definitions — quality is indistinguishable from Sonnet for this task. Sonnet 4.6 (~$0.002) offers stronger reasoning and is great for dense academic text. Opus 4.7 (~$0.008) is the most capable model available, ideal for highly technical or ambiguous terms. Model selection is only available to BYOK users.</div>
+      </details>
+
+      <details class="fade-in fade-in-delay-5">
+        <summary>
+          How do I cancel or get a refund?
+          <span class="summary-icon">+</span>
+        </summary>
+        <div class="faq-answer">There's nothing to cancel — WordLens is a one-time purchase with no subscription. If you're unsatisfied within 7 days of purchasing Pro, email us and we'll refund you in full, no questions asked. BYOK users pay Anthropic directly and should manage their usage at console.anthropic.com.</div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- CTA BAND                                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section class="cta-band">
+  <div class="container">
+    <div class="fade-in">
+      <h2>Start reading smarter today.</h2>
+      <p>Free to install. No account. Works everywhere.</p>
+      <a href="https://chrome.google.com/webstore" class="btn btn-green" target="_blank" rel="noopener">
+        Add to Chrome — It's Free
+      </a>
+      <p class="cta-band-note">50 free AI lookups · $2.99 for 550 total · Unlimited with your own key</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                                     -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">Word<span>Lens</span></div>
+      <ul class="footer-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#byok">BYOK</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <div class="footer-credit">Built with Claude by MVP Analytics LLC</div>
+    </div>
+    <div class="footer-tagline">WordLens — Read more. Understand everything.</div>
+  </div>
+</footer>
+
+<script>
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Smooth anchor scroll with offset for sticky nav
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+      const target = document.querySelector(link.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      const offset = 72;
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    });
+  });
+</script>
+
+</body>
+</html>
