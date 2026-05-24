@@ -244,15 +244,16 @@
     }
   }
 
-  function showErrorTooltip(word, anchorX, anchorY) {
+  function showErrorTooltip(word, anchorX, anchorY, msg) {
     const el = document.getElementById(TOOLTIP_ID);
     if (!el) return;
+    const display = msg || 'Could not retrieve a definition. Check your connection and API key.';
     el.innerHTML = `
       <div class="wl-header">
         <span class="wl-word">${escHtml(word)}</span>
       </div>
       <div class="wl-body">
-        <p class="wl-definition wl-error-text">Could not retrieve a definition. Check your connection and API key.</p>
+        <p class="wl-definition wl-error-text">${escHtml(display)}</p>
       </div>`;
     positionTooltip(el, anchorX, anchorY);
   }
@@ -295,16 +296,38 @@
 
     createLoadingTooltip(word, anchorX, anchorY);
 
+    // Fallback: if the background never replies within 10s, show an error
+    // (can happen if the service worker wakes cold or creds.json is missing)
+    const timeoutId = setTimeout(() => {
+      showErrorTooltip(word, anchorX, anchorY, 'Request timed out. Try reloading the page.');
+    }, 10000);
+
     chrome.runtime.sendMessage(
       { type: 'LOOKUP_WORD', word, sentence },
       response => {
-        if (chrome.runtime.lastError) return;
-        if (!response) return;
+        clearTimeout(timeoutId);
+
+        // lastError fires when the extension was reloaded but the page wasn't —
+        // tell the user to refresh rather than leaving the spinner up forever.
+        if (chrome.runtime.lastError) {
+          console.warn('[WordLens]', chrome.runtime.lastError.message);
+          showErrorTooltip(word, anchorX, anchorY,
+            chrome.runtime.lastError.message.includes('invalidated')
+              ? 'Extension was reloaded — refresh this page.'
+              : chrome.runtime.lastError.message
+          );
+          return;
+        }
+
+        if (!response) {
+          showErrorTooltip(word, anchorX, anchorY, 'No response from background.');
+          return;
+        }
 
         if (response.success) {
           renderTooltip(word, sentence, response, anchorX, anchorY);
         } else {
-          showErrorTooltip(word, anchorX, anchorY);
+          showErrorTooltip(word, anchorX, anchorY, response.error);
         }
       }
     );

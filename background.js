@@ -21,13 +21,15 @@ async function loadCreds() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     WL_CREDS = { ...WL_CREDS, ...json };
+    console.log('[WordLens] creds.json loaded. API key present:', !!WL_CREDS.ANTHROPIC_API_KEY);
 
     // Make the Stripe link available to the settings popup via storage
     if (WL_CREDS.STRIPE_PAYMENT_LINK) {
       await chrome.storage.local.set({ stripeLink: WL_CREDS.STRIPE_PAYMENT_LINK });
     }
   } catch (err) {
-    console.error('[WordLens] Failed to load creds.json. Add your API key and Stripe link to that file.', err.message);
+    console.error('[WordLens] Failed to load creds.json:', err.message,
+      '— create creds.json in the extension folder with your ANTHROPIC_API_KEY.');
   }
 }
 
