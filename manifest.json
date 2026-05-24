@@ -34,12 +34,7 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["content.css"],
-      "run_at": "document_idle",
-      "exclude_matches": [
-        "chrome://*/*",
-        "chrome-extension://*/*",
-        "about://*/*"
-      ]
+      "run_at": "document_idle"
     }
   ],
   "icons": {
