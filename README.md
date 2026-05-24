@@ -2,45 +2,31 @@
 
 Context-aware AI definitions for any word you hover over, powered by Claude.
 
+**Repo:** https://github.com/RyanFunk021/wordlens
+
 ---
 
 ## ⚙️ Setup Before Loading
 
-### 1 · Add your Anthropic API key
+### 1 · Add your credentials
 
-Open **`config.js`** and replace the placeholder:
+Create a **`creds.json`** file in the root of the project (it's gitignored — never committed):
 
-```js
-ANTHROPIC_API_KEY: 'YOUR_ANTHROPIC_API_KEY',
+```json
+{
+  "ANTHROPIC_API_KEY": "sk-ant-...",
+  "STRIPE_PAYMENT_LINK": "https://buy.stripe.com/..."
+}
 ```
 
-Get a key at → https://console.anthropic.com
+- Get an Anthropic key at → https://console.anthropic.com
+- Create a Stripe Payment Link at → https://dashboard.stripe.com/payment-links
 
-> **Security note:** The key lives only in `config.js`, which is imported exclusively by the background service worker. It is never passed to content scripts or exposed to host-page JavaScript. `config.js` is listed in `.gitignore` — never commit it to a public repo.
+`creds.json` is fetched by the background service worker at startup. It never touches content scripts or host-page JavaScript, and it is blocked from git by `.gitignore`. All other constants (model, timeouts, limits) live in the committable `config.js`.
 
 ---
 
-### 2 · Add your Stripe payment link
-
-In the same **`config.js`** file, replace:
-
-```js
-STRIPE_PAYMENT_LINK: 'https://buy.stripe.com/YOUR_LINK',
-```
-
-With your real Stripe Payment Link URL (create one at https://dashboard.stripe.com/payment-links).
-
-After a successful purchase, use Stripe webhooks or a redirect URL to call a small backend that sets `isPro: true` in the extension's storage — **or** for a simpler no-backend approach, have your Stripe success page instruct the user to click a link like:
-
-```
-chrome-extension://YOUR_EXTENSION_ID/settings.html?pro=1
-```
-
-Then check `?pro=1` in `settings.js` and call `sendMessage({ type: 'SET_PRO' })`.
-
----
-
-### 3 · Generate extension icons
+### 2 · Generate extension icons
 
 Open **`icons/generate_icons.html`** in Chrome, click each Download button, and save:
 - `icon16.png`  → `icons/icon16.png`
@@ -61,17 +47,39 @@ To **reload** after editing files: click the ↻ refresh button on the extension
 
 ---
 
+## 🔁 Cloning on a New Machine
+
+```bash
+git clone https://github.com/RyanFunk021/wordlens.git
+cd wordlens
+```
+
+Then manually create `creds.json` — it won't be in the clone:
+
+```json
+{
+  "ANTHROPIC_API_KEY": "sk-ant-...",
+  "STRIPE_PAYMENT_LINK": "https://buy.stripe.com/..."
+}
+```
+
+Then follow the icon generation and Chrome loading steps above.
+
+---
+
 ## 📁 File Overview
 
 | File | Purpose |
 |------|---------|
+| `creds.json` | **Gitignored.** Your API key + Stripe link. Create manually after cloning. |
+| `config.js` | Safe to commit. Model ID and all tuneable constants (no secrets). |
 | `manifest.json` | Extension manifest (Manifest V3) |
-| `config.js` | API key, model ID, and all tuneable constants *(gitignored)* |
-| `background.js` | Service worker — API calls, caching, lookup cap enforcement, side-panel control |
+| `background.js` | Service worker — loads creds, Claude API calls, caching, lookup cap, side-panel control |
 | `content.js` | Injected into every page — hover detection, tooltip, upsell banner |
 | `content.css` | Tooltip styles (fully scoped under `#wl-tooltip-root`) |
 | `sidebar.html/js` | Side-panel "Tell me more" deep-dive view |
 | `settings.html/js/css` | Extension popup — usage stats, vocabulary profile, Pro upgrade |
+| `icons/generate_icons.html` | Open in Chrome to generate and download the three PNG icons |
 
 ---
 
@@ -83,7 +91,7 @@ To **reload** after editing files: click the ↻ refresh button on the extension
 4. On a cache miss, the service worker checks the user's **remaining AI lookup quota**. If quota remains, it calls **Claude Haiku** (`claude-haiku-4-5-20251001`) with a complexity-aware prompt.
 5. If Claude fails or times out (5 s), it falls back to **dictionaryapi.dev** and labels the result *(offline definition)*.
 6. If the lookup quota is exhausted, the dictionary fallback fires silently and an **upsell banner** appears at the bottom of the tooltip.
-7. The tooltip renders a **4-sentence description** + pronunciation, feedback buttons, and "Tell me more →".
+7. The tooltip renders a **4-sentence description** + pronunciation button, feedback buttons, and "Tell me more →".
 8. Clicking **👍 / 👎** nudges your vocabulary complexity score (±1, capped 1–10).
 9. Clicking **Tell me more →** opens the **side panel** with a full etymology, examples, nuances, and related words.
 
@@ -109,6 +117,13 @@ WordLens uses a **one-time purchase** model with no ads.
 - An amber upsell banner appears in the tooltip: *"You've used all 50 free AI lookups — Go Pro $2.99 →"*
 - Clicking the banner opens the Settings popup directly
 
+**Pro upgrade flow:**
+After payment, set `isPro: true` via a background message (`SET_PRO`). Simplest no-backend approach: have the Stripe success page direct the user to:
+```
+chrome-extension://YOUR_EXTENSION_ID/settings.html?pro=1
+```
+Then check `?pro=1` in `settings.js` and call `sendMessage({ type: 'SET_PRO' })`.
+
 **Why Haiku instead of Sonnet:**
 Defining a word in 4 sentences at a given complexity level is a simple, structured task — Haiku handles it with output indistinguishable from Sonnet at a fraction of the cost. Sonnet (or Opus) would only be warranted for the sidebar's deeper explanation if you want to A/B test quality there.
 
@@ -116,7 +131,7 @@ Defining a word in 4 sentences at a given complexity level is a simple, structur
 
 ## 🛠 Customisation
 
-All behavioural constants live in `config.js`:
+All behavioural constants live in `config.js` (safe to commit, no secrets):
 
 ```js
 CLAUDE_MODEL: 'claude-haiku-4-5-20251001', // swap to claude-sonnet-4-6 to upgrade quality
