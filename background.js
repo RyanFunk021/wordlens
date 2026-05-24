@@ -318,23 +318,6 @@ async function handleFeedback(request) {
   return { success: true, complexityScore: newComplexity };
 }
 
-async function handleOpenSidebar(request, sender) {
-  try {
-    // Store pending lookup so sidebar can pick it up on load
-    await setStorageData({
-      sidebarPending: {
-        word: request.word,
-        sentence: request.sentence,
-        timestamp: Date.now()
-      }
-    });
-
-    await chrome.sidePanel.open({ tabId: sender.tab.id });
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
 
 async function handleGetStats() {
   const data = await getStorageData({
@@ -397,19 +380,40 @@ async function handleResetProfile() {
 // ─── Router ──────────────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+  // ⚠️  OPEN_SIDEBAR must call chrome.sidePanel.open() SYNCHRONOUSLY —
+  // before any await — otherwise Chrome drops the user-gesture context
+  // and the call silently fails. Handle it here, outside the async path.
+  if (request.type === 'OPEN_SIDEBAR') {
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      chrome.sidePanel.open({ tabId }).catch(err =>
+        console.warn('[WordLens] sidePanel.open failed:', err.message)
+      );
+    }
+    // Write pending lookup data async after the gesture-sensitive call
+    setStorageData({
+      sidebarPending: {
+        word:      request.word,
+        sentence:  request.sentence,
+        timestamp: Date.now(),
+      }
+    }).then(() => sendResponse({ success: true }));
+    return true;
+  }
+
   const handle = async () => {
     await credsReady; // ensure creds.json is loaded before any handler runs
     switch (request.type) {
-      case 'LOOKUP_WORD':       return handleLookupWord(request, sender);
-      case 'SIDEBAR_LOOKUP':    return handleSidebarLookup(request);
-      case 'SUBMIT_FEEDBACK':   return handleFeedback(request);
-      case 'OPEN_SIDEBAR':      return handleOpenSidebar(request, sender);
-      case 'GET_STATS':         return handleGetStats();
-      case 'GET_HISTORY':       return handleGetHistory();
+      case 'LOOKUP_WORD':         return handleLookupWord(request, sender);
+      case 'SIDEBAR_LOOKUP':      return handleSidebarLookup(request);
+      case 'SUBMIT_FEEDBACK':     return handleFeedback(request);
+      case 'GET_STATS':           return handleGetStats();
+      case 'GET_HISTORY':         return handleGetHistory();
       case 'GET_SIDEBAR_PENDING': return handleGetSidebarPending();
-      case 'SET_PRO':           return handleSetPro();
-      case 'RESET_PROFILE':     return handleResetProfile();
-      case 'OPEN_SETTINGS':     chrome.action.openPopup(); return { success: true };
+      case 'SET_PRO':             return handleSetPro();
+      case 'RESET_PROFILE':       return handleResetProfile();
+      case 'OPEN_SETTINGS':       chrome.action.openPopup(); return { success: true };
       default:
         return { success: false, error: `Unknown message type: ${request.type}` };
     }
