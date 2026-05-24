@@ -108,7 +108,10 @@ async function callClaudeAPI(prompt) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        // Required when calling the Anthropic API directly from a browser
+        // context (including Chrome extension service workers).
+        'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
         model,
@@ -118,7 +121,8 @@ async function callClaudeAPI(prompt) {
     });
 
     if (!response.ok) {
-      throw new Error(`Claude API error: ${response.status}`);
+      const body = await response.text().catch(() => '');
+      throw new Error(`Claude API ${response.status}: ${body}`);
     }
 
     const json = await response.json();
@@ -244,7 +248,7 @@ async function handleLookupWord(request, sender) {
     const prompt = buildShortPrompt(word, sentence, complexity);
     definition = await callClaudeAPI(prompt);
   } catch (err) {
-    console.warn('[WordLens] Claude API failed, falling back to dictionary:', err.message);
+    console.warn('[WordLens] Claude API failed:', err.message, '— falling back to dictionary');
   }
 
   if (!definition) {
