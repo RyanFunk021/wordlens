@@ -78,22 +78,25 @@ Then follow the icon generation and Chrome loading steps above.
 | `content.js` | Injected into every page — hover detection, tooltip, upsell banner |
 | `content.css` | Tooltip styles (fully scoped under `#wl-tooltip-root`) |
 | `sidebar.html/js` | Side-panel "Tell me more" deep-dive view |
-| `settings.html/js/css` | Extension popup — usage stats, vocabulary profile, Pro upgrade |
+| `settings.html/js/css` | Extension popup — usage stats, vocabulary profile, BYOK key + model picker, Pro upgrade |
 | `icons/generate_icons.html` | Open in Chrome to generate and download the three PNG icons |
 
 ---
 
 ## 🧠 How It Works
 
-1. You hover over any word for **600 ms** — a loading tooltip appears immediately.
+1. You hover over any word for **600 ms** — a loading tooltip appears immediately. Highlighted phrases also trigger a lookup on hover.
 2. WordLens extracts the **surrounding sentence** (up to 300 chars each side) for context.
-3. A request is sent to the background service worker, which checks the **7-day cache** first. Cached lookups are free and don't count against any limit.
-4. On a cache miss, the service worker checks the user's **remaining AI lookup quota**. If quota remains, it calls **Claude Haiku** (`claude-haiku-4-5-20251001`) with a complexity-aware prompt.
-5. If Claude fails or times out (5 s), it falls back to **dictionaryapi.dev** and labels the result *(offline definition)*.
-6. If the lookup quota is exhausted, the dictionary fallback fires silently and an **upsell banner** appears at the bottom of the tooltip.
-7. The tooltip renders a **4-sentence description** + pronunciation button, feedback buttons, and "Tell me more →".
-8. Clicking **👍 / 👎** nudges your vocabulary complexity score (±1, capped 1–10).
-9. Clicking **Tell me more →** opens the **side panel** with a full etymology, examples, nuances, and related words.
+3. A request is sent to the background service worker, which checks the **7-day cache** first. Cache hits are free and don't count against any limit.
+4. On a cache miss the service worker resolves which key and model to use:
+   - **BYOK active** → uses the user's own Anthropic key + their chosen model; no cap applied, usage count not incremented.
+   - **No BYOK** → uses the developer key from `creds.json`; checks the remaining quota before calling.
+5. The API call is made to Claude (default: Haiku 4.5) with a complexity-aware 4-sentence prompt. Timeout is 5 s.
+6. If Claude fails or times out, it falls back to **dictionaryapi.dev** and labels the result *(offline definition)*.
+7. If the lookup quota is exhausted (free/Pro users only), the dictionary fallback fires silently and an **amber upsell banner** appears in the tooltip.
+8. The tooltip renders a **4-sentence description** + 🔊 pronunciation button, 👍 👎 feedback buttons, and "Tell me more →".
+9. Clicking **👍 / 👎** nudges your vocabulary complexity score (±1, capped 1–10) and logs the feedback.
+10. Clicking **Tell me more →** opens the **side panel** with a full etymology, examples, nuances, and related words — and logs the event as `'expanded'` feedback.
 
 ---
 
@@ -132,7 +135,7 @@ Defining a word in 4 sentences is a simple, structured task — Haiku handles it
 All behavioural constants live in `config.js` (safe to commit, no secrets):
 
 ```js
-CLAUDE_MODEL: 'claude-haiku-4-5-20251001', // swap to claude-sonnet-4-6 to upgrade quality
+CLAUDE_MODEL: 'claude-haiku-4-5-20251001', // default model (overridden by BYOK model selection)
 HOVER_DELAY_MS: 600,     // ms before tooltip fires
 CACHE_TTL_DAYS: 7,       // cache lifetime
 CONTEXT_CHARS:  300,     // sentence context radius (chars each side of word)
@@ -140,6 +143,12 @@ DEFAULT_COMPLEXITY: 5,   // starting vocab level (1 = simple, 10 = academic)
 FREE_LOOKUP_LIMIT: 50,   // AI lookups available on the free tier
 PRO_LOOKUP_BONUS:  500,  // additional AI lookups unlocked by Pro purchase
 API_TIMEOUT_MS: 5000,    // ms before Claude call is abandoned and fallback fires
+BYOK_MODELS: [ ... ],    // models shown in the Settings model dropdown
 ```
 
 To change the pricing tiers, update `FREE_LOOKUP_LIMIT` and `PRO_LOOKUP_BONUS` — the Settings UI and upsell banner both read these values at runtime.
+
+To add a new model to the BYOK dropdown, append an entry to `BYOK_MODELS`:
+```js
+{ id: 'claude-new-model-id', label: 'New Model — description' }
+```
