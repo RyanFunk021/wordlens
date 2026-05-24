@@ -21,6 +21,33 @@
   let currentWord     = null;
   let currentSentence = null;
   let pendingAbort    = false;
+  let contextValid    = true; // flips false when the extension is reloaded
+
+  /**
+   * Returns true if chrome.runtime is still live.
+   * When the extension is reloaded while a tab stays open, chrome.runtime.id
+   * becomes undefined — any call to sendMessage will throw "Extension context
+   * invalidated". We check this before every chrome.runtime call and tear down
+   * the content script gracefully when it goes stale.
+   */
+  function isContextValid() {
+    try {
+      return !!chrome.runtime?.id;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Call once to disable WordLens on this page without throwing any errors. */
+  function tearDown() {
+    contextValid = false;
+    clearTimeout(hoverTimer);
+    removeTooltip();
+    document.removeEventListener('mousemove', onMouseMove, { passive: true });
+    document.removeEventListener('mousedown', onMouseDown, { passive: true });
+    document.removeEventListener('keydown',   onKeyDown,   { passive: true });
+    document.removeEventListener('scroll',    onScroll,    { passive: true, capture: true });
+  }
 
   // ─── Word extraction ────────────────────────────────────────────────────────
 
@@ -268,6 +295,7 @@
   }
 
   function submitFeedback(word, sentence, feedback) {
+    if (!isContextValid()) return;
     chrome.runtime.sendMessage({
       type: 'SUBMIT_FEEDBACK',
       word,
@@ -277,14 +305,13 @@
   }
 
   function openSidebar(word, sentence) {
-    // Log as 'expanded' feedback
+    if (!isContextValid()) return;
     chrome.runtime.sendMessage({
       type: 'SUBMIT_FEEDBACK',
       word,
       feedback: 'expanded',
       domain: location.hostname
     });
-
     chrome.runtime.sendMessage({ type: 'OPEN_SIDEBAR', word, sentence });
   }
 
@@ -336,12 +363,17 @@
   // ─── Event listeners ────────────────────────────────────────────────────────
 
   function onMouseMove(e) {
+    // If the extension was reloaded, stop all activity silently
+    if (!contextValid || !isContextValid()) { tearDown(); return; }
+
     clearTimeout(hoverTimer);
 
     // Do not re-trigger while hovering over our own tooltip
     if (tooltipEl && tooltipEl.contains(e.target)) return;
 
     hoverTimer = setTimeout(() => {
+      if (!contextValid || !isContextValid()) { tearDown(); return; }
+
       const result = getWordAtPoint(e.clientX, e.clientY);
       if (!result) return;
 
